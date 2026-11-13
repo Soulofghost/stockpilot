@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockPilot | Multi-Warehouse Inventory & Logistics Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <div class="brand-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          <path d="m3.3 7 8.7 5 8.7-5"/>
+          <path d="M12 22V12"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-name">STOCKPILOT <span class="tag-status">WMS / LEDGER</span></h1>
+        <p class="brand-sub">Multi-Facility Inventory & Automated Replenishment Engine</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" id="btnOpenPOModal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        New Purchase Order
+      </button>
+      <button class="btn btn-primary" id="btnOpenOperationModal">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Execute Movement
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+    <!-- Executive KPI Grid -->
+    <section class="kpi-banner">
+      <div class="kpi-box">
+        <span class="kpi-tag">Total Inventory Valuation</span>
+        <div class="kpi-val" id="kpiValuation">$0</div>
+        <span class="kpi-hint" id="kpiUnits">0 Total Units Tracked</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-tag">Registered SKUs</span>
+        <div class="kpi-val" id="kpiSkus">0</div>
+        <span class="kpi-hint" id="kpiWarehouses">Across 0 Distribution Hubs</span>
+      </div>
+      <div class="kpi-box box-alert">
+        <span class="kpi-tag">Active Reorder Alerts</span>
+        <div class="kpi-val" id="kpiAlerts">0</div>
+        <span class="kpi-hint" id="kpiCritical">0 In Critical Deficit</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-tag">Open Purchase Orders</span>
+        <div class="kpi-val" id="kpiPOs">0</div>
+        <span class="kpi-hint">Awaiting Inbound Consignment</span>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="inventoryTab">Inventory Master</button>
+      <button class="tab-btn" data-tab="alertsTab">Reorder Alerts (<span id="alertCountBadge">0</span>)</button>
+      <button class="tab-btn" data-tab="poTab">Purchase Orders</button>
+      <button class="tab-btn" data-tab="movementsTab">Movement Ledger</button>
+      <button class="tab-btn" data-tab="warehousesTab">Hub Capacity</button>
+    </nav>
+
+    <!-- Tab 1: Inventory Master -->
+    <section id="inventoryTab" class="tab-pane active">
+      <div class="pane-controls">
+        <input type="text" id="inventorySearch" placeholder="Search SKU, item title, or category..." class="ctrl-input">
+        <div class="quick-stats">
+          <span class="live-pulse"></span>
+          <span>SQLite WAL Ledger Active</span>
+        </div>
+      </div>
+      <div class="table-frame">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SKU Code</th>
+              <th>Item Description</th>
+              <th>Category</th>
+              <th>Unit Cost</th>
+              <th>On Hand</th>
+              <th>Reorder Min</th>
+              <th>Valuation</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 2: Reorder Alerts -->
+    <section id="alertsTab" class="tab-pane">
+      <div class="alert-info-banner">
+        <strong>Automated Replenishment Engine:</strong> The items below have fallen below their configured safety thresholds and require replenishment orders.
+      </div>
+      <div class="table-frame">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Facility</th>
+              <th>SKU</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Safety Min</th>
+              <th>Deficit Status</th>
+              <th>Quick Reorder</th>
+            </tr>
+          </thead>
+          <tbody id="alertsTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 3: Purchase Orders -->
+    <section id="poTab" class="tab-pane">
+      <div class="table-frame">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>PO Number</th>
+              <th>SKU / Product</th>
+              <th>Destination Hub</th>
+              <th>Quantity</th>
+              <th>Total Cost</th>
+              <th>Supplier</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="poTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 4: Movement Ledger -->
+    <section id="movementsTab" class="tab-pane">
+      <div class="table-frame">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Movement ID</th>
+              <th>Timestamp</th>
+              <th>Type</th>
+              <th>SKU</th>
+              <th>Route / Facility</th>
+              <th>Quantity</th>
+              <th>Reference Note</th>
+            </tr>
+          </thead>
+          <tbody id="movementsTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Tab 5: Hub Capacity -->
+    <section id="warehousesTab" class="tab-pane">
+      <div class="hubs-grid" id="hubsGrid">
+        <!-- Populated dynamically -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Movement Modal (Intake, Transfer, Outflow) -->
+  <div id="operationModal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Execute Stock Movement</h3>
+        <button class="modal-close" id="btnCloseOpModal">&times;</button>
+      </div>
+      <form id="movementForm" class="modal-body">
+        <div class="form-group">
+          <label>Movement Type</label>
+          <div class="radio-toggle">
+            <label class="radio-label"><input type="radio" name="movType" value="intake" checked> Inbound Intake</label>
+            <label class="radio-label"><input type="radio" name="movType" value="transfer"> Inter-Hub Transfer</label>
+            <label class="radio-label"><input type="radio" name="movType" value="outflow"> Outbound Dispatch</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="opSku">Select Item / SKU *</label>
+          <select id="opSku" required class="form-ctrl"></select>
+        </div>
+
+        <div class="form-row" id="sourceWarehouseRow" style="display:none;">
+          <div class="form-group">
+            <label for="opSourceWh">Source Facility *</label>
+            <select id="opSourceWh" class="form-ctrl"></select>
+          </div>
+        </div>
+
+        <div class="form-row" id="destWarehouseRow">
+          <div class="form-group">
+            <label for="opDestWh">Destination Facility *</label>
+            <select id="opDestWh" required class="form-ctrl"></select>
+          </div>
+          <div class="form-group" id="binLocationGroup">
+            <label for="opBin">Bin Location</label>
+            <input type="text" id="opBin" placeholder="e.g. A1-04-B" class="form-ctrl">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="opQuantity">Quantity Units *</label>
+          <input type="number" id="opQuantity" min="1" required placeholder="10" class="form-ctrl">
+        </div>
+
+        <div class="form-group">
+          <label for="opNote">Audit Note / PO / Manifest</label>
+          <input type="text" id="opNote" placeholder="e.g. Bill of Lading #4920" class="form-ctrl">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelOp">Cancel</button>
+          <button type="submit" class="btn btn-primary">Commit to Ledger</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Purchase Order Modal -->
+  <div id="poModal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Issue Purchase Order</h3>
+        <button class="modal-close" id="btnClosePOModal">&times;</button>
+      </div>
+      <form id="createPOForm" class="modal-body">
+        <div class="form-group">
+          <label for="poSku">SKU / Item *</label>
+          <select id="poSku" required class="form-ctrl"></select>
+        </div>
+        <div class="form-group">
+          <label for="poWarehouse">Destination Hub *</label>
+          <select id="poWarehouse" required class="form-ctrl"></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="poQuantity">Order Quantity *</label>
+            <input type="number" id="poQuantity" min="1" required class="form-ctrl" placeholder="50">
+          </div>
+          <div class="form-group">
+            <label for="poUnitCost">Contracted Unit Cost ($) *</label>
+            <input type="number" id="poUnitCost" min="0" step="0.01" required class="form-ctrl" placeholder="340.00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="poSupplier">Supplier / OEM Vendor *</label>
+          <input type="text" id="poSupplier" required class="form-ctrl" placeholder="e.g. Amphenol Fiber Systems">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelPO">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Purchase Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
